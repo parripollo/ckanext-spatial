@@ -140,7 +140,7 @@ important to understand their differences and the necessary setup
 required when choosing which one to use. To configure the search backend
 use the following configuration option:
 
-    ckanext.spatial.search_backend = solr-bbox | solr-spatial-field
+    ckanext.spatial.search_backend = solr-bbox | solr-spatial-field | postgres-bbox
 
 The following table summarizes the different spatial search backends:
 
@@ -148,6 +148,14 @@ The following table summarizes the different spatial search backends:
   |-----------------------|- ------------------------------- ----|---------------------|
   | `solr-bbox` (default) | Bounding Box, Polygon (extents only) | Custom fields       |
   |  `solr-spatial-field` | Bounding Box, Point and Polygon      | Custom field +  JTS |
+  |  `postgres-bbox`      | Bounding Box, Polygon (extents only) | No Solr: the PostgreSQL search backend of CKAN |
+
+- `postgres-bbox`:
+    For a CKAN whose search index is in PostgreSQL (`ckan.search.backend =
+    postgres`). It indexes the extent of the geometry like `solr-bbox`
+    and filters with a plain range query on it, so nothing has to be
+    configured on the search side. Unlike `solr-bbox` it does not rank
+    the results by overlap: they keep the order of the query.
 
 !!! Note
     The default `solr-bbox` search backend was previously known as `solr`.
