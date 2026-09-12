@@ -3,6 +3,7 @@ import json
 import pytest
 
 from ckan.lib.search import SearchError
+from ckan.common import config
 
 import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
@@ -34,9 +35,19 @@ extents = {
 }
 
 
-@pytest.mark.usefixtures("clean_db", "clean_index", "with_plugins")
-@pytest.mark.ckan_config("ckanext.spatial.search_backend", "solr-bbox")
-class TestBBoxSearch(SpatialTestBase):
+# the Solr backends need Solr behind CKAN; a CKAN whose search backend is
+# not Solr (ckan.search.backend) runs the postgres-bbox tests instead
+solr_only = pytest.mark.skipif(
+    config.get("ckan.search.backend", "solr") != "solr",
+    reason="needs the Solr search backend of CKAN")
+postgres_only = pytest.mark.skipif(
+    config.get("ckan.search.backend", "solr") != "postgres",
+    reason="needs the PostgreSQL search backend of CKAN")
+
+
+class BBoxSearchTests(SpatialTestBase):
+    """Bounding box searches, run against each bbox backend below."""
+
     def test_spatial_query(self):
         dataset = factories.Dataset(
             extras=[{"key": "spatial", "value": extents["ohio"]}]
@@ -373,6 +384,22 @@ class TestBBoxSearch(SpatialTestBase):
 
 
 
+@solr_only
+@pytest.mark.usefixtures("clean_db", "clean_index", "with_plugins")
+@pytest.mark.ckan_config("ckanext.spatial.search_backend", "solr-bbox")
+class TestBBoxSearch(BBoxSearchTests):
+    pass
+
+
+@postgres_only
+@pytest.mark.usefixtures("clean_db", "clean_index", "with_plugins")
+@pytest.mark.ckan_config("ckanext.spatial.search_backend", "postgres-bbox")
+class TestPostgresBBoxSearch(BBoxSearchTests):
+    def test_sorting_of_bbox_results(self):
+        pytest.skip("postgres-bbox filters by overlap, it does not rank by it")
+
+
+@solr_only
 @pytest.mark.usefixtures("clean_db", "clean_index", "with_plugins")
 @pytest.mark.ckan_config("ckanext.spatial.search_backend", "solr-spatial-field")
 class TestSpatialFieldSearch(SpatialTestBase):
@@ -720,6 +747,7 @@ class TestSpatialFieldSearch(SpatialTestBase):
         assert result["count"] == 2
 
 
+@solr_only
 @pytest.mark.usefixtures("clean_db", "clean_index", "with_plugins")
 @pytest.mark.ckan_config(
     "ckan.plugins", "test_spatial_plugin spatial_metadata spatial_query")

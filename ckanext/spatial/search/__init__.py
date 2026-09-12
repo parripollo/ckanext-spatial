@@ -215,7 +215,50 @@ you need to split the geometry in order to fit the parts. Not indexing"""
         return search_params
 
 
+class PostgresBBoxSearchBackend(SolrBBoxSearchBackend):
+    """
+    Bounding box search on the PostgreSQL search backend of CKAN (no Solr).
+
+    The dataset is indexed like ``solr-bbox`` (the envelope of the geometry
+    as minx, miny, maxx, maxy) plus the area of that envelope, and the
+    filter is a plain range query on those numbers: the envelope has to
+    overlap the input bounding box on both axes, with a positive area, the
+    same condition ``solr-bbox`` expresses with its function query.
+
+    What ``solr-bbox`` does on top, ranking the results by how much they
+    overlap the input box, needs a function query and is not available:
+    the results keep the order of the query (relevance or ``sort``).
+    """
+
+    def index_dataset(self, dataset_dict):
+        dataset_dict = super().index_dataset(dataset_dict)
+        if "minx" in dataset_dict:
+            dataset_dict["bbox_area"] = (
+                (dataset_dict["maxx"] - dataset_dict["minx"])
+                * (dataset_dict["maxy"] - dataset_dict["miny"]))
+        return dataset_dict
+
+    def search_params(self, bbox, search_params):
+        while bbox["minx"] < -180:
+            bbox["minx"] += 360
+            bbox["maxx"] += 360
+        while bbox["minx"] > 180:
+            bbox["minx"] -= 360
+            bbox["maxx"] -= 360
+        # an open interval on each axis: touching is not overlapping, and
+        # a point or a line (no area) is not found, as with solr-bbox
+        fq = (
+            "+minx:{{* TO {maxx}}} +maxx:{{{minx} TO *}} "
+            "+miny:{{* TO {maxy}}} +maxy:{{{miny} TO *}} "
+            "+bbox_area:{{0 TO *}}"
+        ).format(**bbox)
+        search_params["fq_list"] = search_params.get("fq_list", [])
+        search_params["fq_list"].append(fq)
+        return search_params
+
+
 search_backends = {
     "solr-bbox": SolrBBoxSearchBackend,
     "solr-spatial-field": SolrSpatialFieldSearchBackend,
+    "postgres-bbox": PostgresBBoxSearchBackend,
 }

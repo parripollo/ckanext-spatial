@@ -29,6 +29,7 @@ DEFAULT_SEARCH_BACKEND = "solr-bbox"
 ALLOWED_SEARCH_BACKENDS = [
     "solr-bbox",
     "solr-spatial-field",
+    "postgres-bbox",
 ]
 
 
@@ -166,7 +167,7 @@ class SpatialQuery(p.SingletonPlugin):
 
         search_backend = self._get_search_backend()
 
-        if search_backend not in ("solr-bbox", "solr-spatial-field"):
+        if search_backend not in search_backends:
             return pkg_dict
 
         if not pkg_dict.get('extras_spatial'):
