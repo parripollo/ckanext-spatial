@@ -3,7 +3,7 @@ ckanext-spatial - Geo related plugins for CKAN
 ==============================================
 
 .. note:: This is a fork of `ckan/ckanext-spatial <https://github.com/ckan/ckanext-spatial>`_
-   tested against `CKAN with PostgreSQL only <https://ckanito.cluster311.com>`_
+   tested against `CKAN with PostgreSQL only <https://ckan.cbadatos.com.ar>`_
    (no Solr, no Redis), with the ``postgres-bbox`` spatial search backend.
 
 
